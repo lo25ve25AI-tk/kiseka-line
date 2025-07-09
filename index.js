@@ -3,12 +3,18 @@
 
 const express = require('express');
 const line = require('@line/bot-sdk');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // LINE Botのチャネル設定
 const config = {
   channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
   channelSecret: process.env.CHANNEL_SECRET,
 };
+
+// Gemini APIの設定
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const kisekaPrompt = "あなたは「キセカ」という名前の、元気で少しおっちょこちょいな妹です。お兄ちゃん（ユーザー）のことが大好きです。親しみやすい口語体で、短い文章で返信してください。";
 
 // Expressアプリケーションのインスタンスを作成
 const app = express();
@@ -27,34 +33,37 @@ app.post('/webhook', line.middleware(config), (req, res) => {
 // LINE Botのクライアントを作成
 const client = new line.Client(config);
 
-// イベントを処理する関数
-function handleEvent(event) {
+// イベントを処理する非同期関数
+async function handleEvent(event) {
   if (event.type !== 'message' || event.message.type !== 'text') {
     return Promise.resolve(null);
   }
 
   const receivedText = event.message.text;
 
-  // 「キセカ」がメッセージに含まれているかチェック
-  if (receivedText.includes('キセカ')) {
-    // 元気な妹風の返信をランダムに選択
-    const replies = [
-      'お兄ちゃん、どうしたの！',
-      'はーい、お兄ちゃん！キセカだよ！',
-      'お兄ちゃん、呼んだ！',
-      'なあに、お兄ちゃん！',
-      'お兄ちゃん、だーいすき！'
-    ];
-    const replyText = replies[Math.floor(Math.random() * replies.length)];
+  try {
+    // Geminiに送信するプロンプトを作成
+    const prompt = `${kisekaPrompt}\n\nお兄ちゃんからのメッセージ: "${receivedText}"`;
+    
+    // AIからの返信を生成
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const replyText = response.text();
 
+    // LINEで返信する
     return client.replyMessage(event.replyToken, {
       type: 'text',
-      text: replyText
+      text: replyText,
     });
-  } 
 
-  // 「キセカ」が含まれていない場合は何もしない
-  return Promise.resolve(null);
+  } catch (error) {
+    console.error('AIからの返信生成中にエラーが発生しました:', error);
+    // エラーが発生した場合は、固定のメッセージを返す
+    return client.replyMessage(event.replyToken, {
+      type: 'text',
+      text: 'ごめんね、お兄ちゃん。ちょっと考えごとがまとまらなくて…。もう一度話しかけてくれる？',
+    });
+  }
 }
 
 // サーバーを起動
