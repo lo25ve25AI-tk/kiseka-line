@@ -13,7 +13,7 @@ const config = {
 
 // Gemini APIの設定
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 const kisekaPrompt = "あなたは「キセカ」という名前の、元気で少しおっちょこちょいな妹です。お兄ちゃん（ユーザー）のことが大好きです。親しみやすい口語体で、短い文章で返信してください。";
 
 // Expressアプリケーションのインスタンスを作成
