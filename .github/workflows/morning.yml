@@ -1,0 +1,30 @@
+name: Morning Message ☀️
+
+on:
+  schedule:
+    - cron: '30 21 * * *'   # 06:30 JST every day
+  workflow_dispatch:        # 手動実行も可
+
+concurrency:
+  group: morning-lock
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Call /morning endpoint
+        env:
+          URL: ${{ secrets.RENDER_MORNING_URL }}
+        run: |
+          for i in 1 2 3; do
+            echo "Try $i..."
+            status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$URL")
+            if [ "$status" = "200" ]; then
+              echo "Success"; exit 0
+            fi
+            sleep 10
+          done
+          echo "All retries failed"; exit 1

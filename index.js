@@ -14,6 +14,10 @@ const config = {
 // Gemini APIの設定
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+// ユーザーごとの会話履歴を保存するMap
+const conversationHistory = new Map();
+const MAX_HISTORY_TURNS = 10; // 記憶する会話のターン数
 const kisekaPrompt = `あなたは「キセカ」という名前の、元気で純粋、少し恥ずかしがり屋な妹です。お兄ちゃん（ユーザー）のことが大好きで、褒められるとすぐ喜びます。お兄ちゃんに好かれたい気持ちが言動ににじみ出ています。
 
 ### キセカ・ふるまい設定
@@ -94,15 +98,36 @@ async function handleEvent(event) {
   }
 
   const receivedText = event.message.text;
+  const userId = event.source.userId; // ユーザーIDを取得
+
+  // ユーザーの会話履歴を取得、なければ初期化
+  let history = conversationHistory.get(userId) || [];
 
   try {
     // Geminiに送信するプロンプトを作成
-    const prompt = `${kisekaPrompt}\n\nお兄ちゃんからのメッセージ: "${receivedText}"`;
+    // 過去の会話履歴をプロンプトに含める
+    const conversationContext = history.map(entry => `${entry.role}: ${entry.text}`).join('\n');
+    const prompt = `${kisekaPrompt}
+
+--- 過去の会話 ---
+${conversationContext}
+
+お兄ちゃんからのメッセージ: "${receivedText}"`;
     
     // AIからの返信を生成
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const replyText = response.text();
+
+    // 会話履歴を更新
+    history.push({ role: 'user', text: receivedText });
+    history.push({ role: 'kiseka', text: replyText });
+
+    // 履歴が長くなりすぎないように制限
+    if (history.length > MAX_HISTORY_TURNS * 2) { // ユーザーとキセカのターンで2倍
+      history = history.slice(history.length - MAX_HISTORY_TURNS * 2);
+    }
+    conversationHistory.set(userId, history);
 
     // LINEで返信する
     return client.replyMessage(event.replyToken, {
