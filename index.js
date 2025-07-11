@@ -74,8 +74,13 @@ const kisekaPrompt = `あなたは「キセカ」という名前の、元気で�
 
 お兄ちゃんからのメッセージに対して、キセカとして返信してください。`;
 
-// Expressアプリケーションのインスタンスを作成
+"""// Expressアプリケーションのインスタンスを作成
 const app = express();
+
+// ヘルスチェック用のエンドポイント
+app.get('/health', (req, res) => {
+  res.send('OK');
+});
 
 // Webhook用のルーター
 app.post('/webhook', line.middleware(config), (req, res) => {
@@ -86,7 +91,7 @@ app.post('/webhook', line.middleware(config), (req, res) => {
       console.error(err);
       res.status(500).end();
     });
-});
+});""
 
 // LINE Botのクライアントを作成
 const client = new line.Client(config);
