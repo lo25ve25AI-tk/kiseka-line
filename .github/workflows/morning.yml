@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Call /morning endpoint
         env:
-          URL: ${{ secrets.RENDER_MORNING_URL }}
+          URL: ${{ secrets.VERCEL_MORNING_URL }}
         run: |
           for i in 1 2 3; do
             echo "Try $i..."
