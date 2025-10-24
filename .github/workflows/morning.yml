@@ -21,8 +21,12 @@ jobs:
         run: |
           for i in 1 2 3; do
             echo "Try $i..."
-            status=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $MORNING_SECRET" -X POST "$URL")
-            if [ "$status" = "200" ]; then
+            response=$(curl -s -w "%{http_code}" -H "Authorization: Bearer $MORNING_SECRET" -X POST "$URL")
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | head -n-1)
+            echo "HTTP Status Code: $http_code"
+            echo "Response Body: $body"
+            if [ "$http_code" = "200" ]; then
               echo "Success"; exit 0
             fi
             sleep 10
